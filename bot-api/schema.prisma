@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model User {
+  id    String @id @unique 
+  name  String
+  surname String
+  email String?
+  phone String?
+  address String?
+  jobExperiences JobExperience[]
+  academicExperience AcademicExperience[]
+  expectedJob  ExpectedJob? @relation("UserToExpectedJob")
+}
+
+model ExpectedJob {
+  id       Int     @id @default(autoincrement())
+  jobTitle  String
+  annualSalary    Int
+  user   User?  @relation("UserToExpectedJob", fields: [userId], references: [id])
+  userId String?   @unique
+}
+
+model JobExperience {
+    id       Int     @id @default(autoincrement())
+    nbMonths Int
+    company String
+    jobTitle String
+    user User @relation(fields: [userId], references: [id])
+    userId String
+}
+
+model AcademicExperience {
+    id       Int     @id @default(autoincrement())
+    level String
+    university String
+    topic String
+    user User @relation(fields: [userId], references: [id])
+    userId String
+}

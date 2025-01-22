@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+  bot-api:
+    build:
+      context: ./bot-api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000" # Maps port 3000 of the container to port 3000 on the host
+    environment:
+      - DATABASE_HOST=postgres # Service name of the Postgres container
+      - DATABASE_PORT=5432
+      - DATABASE_USER=nestuser
+      - DATABASE_PASSWORD=nestpassword
+      - DATABASE_NAME=nestdb
+    depends_on:
+      - postgres # Ensure Postgres is started before this service
+    restart: always
+
+  chat-front:
+    build:
+      context: ./chat-front
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+
+  prisma-generator:
+    image: node:18-alpine
+    container_name: prisma-generator
+    working_dir: /app
+    volumes:
+      - ./bot-api:/app # Mount the bot-api folder where schema.prisma is located
+    environment:
+      - DATABASE_URL=postgresql://nestuser:nestpassword@postgres:5432/nestdb
+    command: >
+      sh -c "
+      until nc -z postgres 5432; do
+        echo 'Waiting for PostgreSQL...';
+        sleep 2;
+      done;
+      echo 'PostgreSQL is up. Running Prisma generate...';
+      npx prisma migrate dev
+      "
+    depends_on:
+      - postgres # Wait for PostgreSQL to be available
+    restart: "no" # Run once and exit
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432" # Maps port 5432 of the container to port 5432 on the host
+    environment:
+      POSTGRES_USER: nestuser
+      POSTGRES_PASSWORD: nestpassword
+      POSTGRES_DB: nestdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persistent data storage
+
+volumes:
+  postgres_data:
+    driver: local
